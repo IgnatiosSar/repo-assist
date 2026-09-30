@@ -1,7 +1,7 @@
 [project]
 name = "repo-assist"
 version = "0.1.0"
-description = "Add your description here"
+description = "Open-source, self-hostable AI software engineering agent for Git repositories."
 readme = "README.md"
 authors = [
     { name = "IgnatiosSar", email = "t8230131@aueb.gr" }
@@ -12,8 +12,13 @@ dependencies = [
 ]
 
 [project.scripts]
-repo-assist = "repo_assist:main"
+repo-assist = "repo_assist.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.18,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
