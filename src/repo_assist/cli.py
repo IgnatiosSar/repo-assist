@@ -2,6 +2,9 @@ import typer
 from pathlib import Path
 
 from repo_assist.services.repository_service import RepositoryService
+#from repo_assist.repositories.index_store import index_store
+from repo_assist.repositories.repository_reader import RepositoryReader
+from repo_assist.services.indexing_service import IndexingService
 
 app = typer.Typer()
 
@@ -50,6 +53,13 @@ def info(repo_path: Path):
     print("────────────────────────────────")
     print(repo_info.description or "No description found.")
 
+@app.command()
+def index(repo_path: Path):
+    reader = RepositoryReader(repo_path)
+    files, directories_count = reader.discover_files()
+    parsing_service = ParsingService()
+    index_store = IndexStore(repo_path)
+    indexing_service = IndexingService(parsing_service, index_store)
 
 def main():
     app()

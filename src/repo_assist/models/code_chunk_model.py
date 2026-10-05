@@ -1,10 +1,11 @@
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
 class CodeChunk:
     content: str
-    path: str
+    path: Path
     language: str
     symbol: str | None
     start_line: int

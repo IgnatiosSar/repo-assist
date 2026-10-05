@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 
 @dataclass
 class IdentityInfo:
@@ -33,7 +34,8 @@ class RepositoryInfo:
 
 @dataclass
 class FileInfo:
-    path: str
+    path: Path
     number_of_lines: int
     language: str | None
+    content_hash: str
     

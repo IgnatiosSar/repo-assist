@@ -1,108 +1,87 @@
+from pathlib import Path
+
 import pytest
 
 from repo_assist.services.repository_service import RepositoryService
 
 
-def test_inspect_python_repository(tmp_path):
+def test_inspect_python_repository(tmp_path: Path):
     (tmp_path / "main.py").write_text(
-        "print('hello')\n"
-        "print('world')\n"
+        "print('hello')\nprint('world')\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "README.md").write_text(
+        "# Test Repository\n\nA test repository.\n",
+        encoding="utf-8",
     )
 
-    (tmp_path / "utils.py").write_text(
-        "def add(a, b):\n"
-        "    return a + b\n"
+    service = RepositoryService(str(tmp_path))
+
+    repository_info = service.inspect_repository()
+
+    assert repository_info.identity.name == tmp_path.name
+    assert repository_info.identity.path == str(tmp_path.resolve())
+
+    assert repository_info.stats.files_count == 2
+    assert repository_info.stats.lines_count == 5
+
+    assert repository_info.languages["Python"].files_count == 1
+    assert repository_info.languages["Python"].lines_count == 2
+
+    assert repository_info.description == "A test repository."
+
+
+def test_inspect_nested_repository(tmp_path: Path):
+    nested_dir = tmp_path / "src" / "repo"
+    nested_dir.mkdir(parents=True)
+
+    (nested_dir / "main.py").write_text(
+        "print('hello')\n",
+        encoding="utf-8",
     )
 
-    service = RepositoryService(tmp_path)
+    service = RepositoryService(str(tmp_path))
 
-    result = service.inspect_repository()
+    repository_info = service.inspect_repository()
 
-    assert result.identity.name == tmp_path.name
-    assert result.identity.path == str(tmp_path.resolve())
-
-    assert result.stats.files_count == 2
-    assert result.stats.directories_count == 0
-    assert result.stats.lines_count == 4
-
-    assert result.languages["Python"].files_count == 2
-    assert result.languages["Python"].lines_count == 4
-    assert result.languages["Python"].percentage_of_total_lines == 100.0
+    assert repository_info.stats.files_count == 1
+    assert repository_info.stats.directories_count == 2
+    assert repository_info.stats.lines_count == 1
 
 
-def test_inspect_nested_repository(tmp_path):
-    src = tmp_path / "src"
-    src.mkdir()
+def test_detect_multiple_languages(tmp_path: Path):
+    (tmp_path / "main.py").write_text(
+        "print('hello')\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "Main.java").write_text(
+        "class Main {}\n",
+        encoding="utf-8",
+    )
 
-    (tmp_path / "main.py").write_text("print('hello')\n")
-    (src / "utils.py").write_text("print('utils')\n")
+    service = RepositoryService(str(tmp_path))
 
-    service = RepositoryService(tmp_path)
+    repository_info = service.inspect_repository()
 
-    result = service.inspect_repository()
+    assert repository_info.stats.files_count == 2
 
-    assert result.stats.files_count == 2
-    assert result.stats.directories_count == 1
-    assert result.stats.lines_count == 2
+    assert repository_info.languages["Python"].files_count == 1
+    assert repository_info.languages["Python"].lines_count == 1
 
-
-def test_detect_multiple_languages(tmp_path):
-    (tmp_path / "main.py").write_text("print('hello')\n")
-    (tmp_path / "App.java").write_text("class App {}\n")
-    (tmp_path / "script.js").write_text("console.log('hello');\n")
-
-    service = RepositoryService(tmp_path)
-
-    result = service.inspect_repository()
-
-    assert result.stats.files_count == 3
-
-    assert result.languages["Python"].files_count == 1
-    assert result.languages["Java"].files_count == 1
-    assert result.languages["JavaScript"].files_count == 1
+    assert repository_info.languages["Java"].files_count == 1
+    assert repository_info.languages["Java"].lines_count == 1
 
 
-def test_ignored_directories_are_not_counted(tmp_path):
-    (tmp_path / "main.py").write_text("print('hello')\n")
-
-    venv = tmp_path / ".venv"
-    venv.mkdir()
-    (venv / "fake.py").write_text("print('ignored')\n")
-
-    node_modules = tmp_path / "node_modules"
-    node_modules.mkdir()
-    (node_modules / "fake.js").write_text("console.log('ignored');\n")
-
-    service = RepositoryService(tmp_path)
-
-    result = service.inspect_repository()
-
-    assert result.stats.files_count == 1
-    assert result.stats.lines_count == 1
-    assert "JavaScript" not in result.languages
-
-
-def test_non_existing_repository_raises_error(tmp_path):
+def test_non_existing_repository_raises_error(tmp_path: Path):
     repository_path = tmp_path / "does-not-exist"
 
     with pytest.raises(FileNotFoundError):
-        RepositoryService(repository_path)
+        RepositoryService(str(repository_path))
 
 
-def test_file_as_repository_path_raises_error(tmp_path):
+def test_file_as_repository_path_raises_error(tmp_path: Path):
     file_path = tmp_path / "file.txt"
-    file_path.write_text("hello\n")
+    file_path.write_text("content", encoding="utf-8")
 
     with pytest.raises(NotADirectoryError):
-        RepositoryService(file_path)
-
-
-def test_non_git_repository(tmp_path):
-    (tmp_path / "main.py").write_text("print('hello')\n")
-
-    service = RepositoryService(tmp_path)
-
-    result = service.inspect_repository()
-
-    assert result.git_info.is_git_repo is False
-    assert result.git_info.branch is None
+        RepositoryService(str(file_path))

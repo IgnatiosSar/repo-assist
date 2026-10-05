@@ -9,12 +9,15 @@ import tree_sitter, tree_sitter_java
 
 
 class JavaCodeParser(CodeParser):
-    def parse_file(self, file_info: FileInfo) -> list[CodeChunk]:
-        path = file_info.path
+    
+    def __init__(self):
         java_language = tree_sitter.Language(tree_sitter_java.language())
-        parser = tree_sitter.Parser(java_language)
-        code_in_bytes = Path(path).read_bytes()
-        tree = parser.parse(code_in_bytes)
+        self.parser = tree_sitter.Parser(java_language)
+
+    def parse_file(self, file_info: FileInfo, repo_path: Path) -> list[CodeChunk]:
+        actual_file_path = repo_path / file_info.path
+        code_in_bytes = actual_file_path.read_bytes()
+        tree = self.parser.parse(code_in_bytes)
         root_node = tree.root_node
   
         methods = self.find_methods(root_node)
